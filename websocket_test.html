@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #messages { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: scroll; margin-bottom: 10px; background-color: #f9f9f9; }
+        .message { margin-bottom: 5px; padding: 3px; border-radius: 3px; }
+        .server { color: blue; background-color: #e7f0ff; }
+        .client { color: green; background-color: #e7ffe7; text-align: right; }
+        .event { color: orange; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test Client</h1>
+    <p>Attempting to connect to ws://localhost:3001</p>
+    
+    <div>
+        <input type="text" id="messageInput" placeholder="Enter message to send" style="width: 300px; padding: 5px;">
+        <button onclick="sendMessage()" style="padding: 5px 10px;">Send Message</button>
+    </div>
+    
+    <h2>Log:</h2>
+    <div id="messages"></div>
+
+    <script>
+        const messageInput = document.getElementById('messageInput');
+        const messagesDiv = document.getElementById('messages');
+        let socket;
+
+        function logMessage(text, type = 'event') {
+            const p = document.createElement('p');
+            p.textContent = text;
+            p.className = `message ${type}`; // Apply class for styling
+            messagesDiv.appendChild(p);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Auto-scroll
+            console.log(`[${type.toUpperCase()}] ${text}`);
+        }
+
+        function connectWebSocket() {
+            logMessage('Attempting to connect...', 'event');
+            socket = new WebSocket('ws://localhost:3001');
+
+            socket.onopen = function(event) {
+                logMessage('Connected to WebSocket server!', 'event');
+            };
+
+            socket.onmessage = function(event) {
+                logMessage('Server: ' + event.data, 'server');
+            };
+
+            socket.onerror = function(error) {
+                // Browsers often don't provide detailed error messages for WebSocket errors
+                // to prevent security issues like port scanning.
+                logMessage('WebSocket Error. Check browser console for more details if available.', 'event');
+                console.error('WebSocket Error: ', error);
+            };
+
+            socket.onclose = function(event) {
+                let reason = event.reason || 'N/A';
+                if (event.code === 1006) {
+                    reason = 'Connection was closed abnormally (e.g., server process stopped or network issue).';
+                }
+                logMessage('Disconnected from WebSocket server. Code: ' + event.code + ', Reason: ' + reason, 'event');
+                if (event.wasClean) {
+                    logMessage('Connection closed cleanly.', 'event');
+                } else {
+                    logMessage('Connection did not close cleanly.', 'event');
+                }
+            };
+        }
+
+        function sendMessage() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = messageInput.value;
+                if (message.trim() === '') {
+                    alert('Please enter a message.');
+                    return;
+                }
+                socket.send(message);
+                logMessage('Client: ' + message, 'client');
+                messageInput.value = ''; // Clear input
+            } else {
+                logMessage('WebSocket is not connected. Cannot send message.', 'event');
+                alert('WebSocket is not connected. Please ensure the server is running and try refreshing the page.');
+            }
+        }
+
+        // Attempt to connect when the page loads
+        connectWebSocket();
+    </script>
+</body>
+</html>
